@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game Test</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: #000;
+        }
+        #score {
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        #debug {
+            color: #fff;
+            margin-top: 20px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div id="debug">Debug info will appear here</div>
+
+    <script>
+        // Debug function
+        function debugLog(message) {
+            const debugDiv = document.getElementById('debug');
+            debugDiv.innerHTML += message + '<br>';
+            console.log(message);
+        }
+
+        // Wait for DOM to be fully loaded
+        window.addEventListener('load', () => {
+            debugLog('Window loaded');
+            
+            const canvas = document.getElementById('gameCanvas');
+            debugLog('Canvas found: ' + (canvas ? 'yes' : 'no'));
+            
+            const ctx = canvas.getContext('2d');
+            debugLog('Context created: ' + (ctx ? 'yes' : 'no'));
+            
+            // Test drawing
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(0, 0, 20, 20);
+            debugLog('Test square drawn');
+        });
+    </script>
+    <script src="game.js"></script>
+</body>
+</html> 
