@@ -4,6 +4,11 @@ const scoreElement = document.getElementById('score');
 const gameOverElement = document.getElementById('gameOver');
 const finalScoreElement = document.getElementById('finalScore');
 
+// Debug information
+console.log('Canvas:', canvas);
+console.log('Context:', ctx);
+console.log('Score element:', scoreElement);
+
 const GRID_SIZE = 20;
 const GRID_COUNT = canvas.width / GRID_SIZE;
 const SNAKE_COLOR = '#00ff00';
@@ -131,8 +136,10 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Start the game
-randomizeFood();
-gameLoop = setInterval(() => {
-    moveSnake();
-    draw();
-}, gameSpeed); 
+document.addEventListener('DOMContentLoaded', () => {
+    randomizeFood();
+    gameLoop = setInterval(() => {
+        moveSnake();
+        draw();
+    }, gameSpeed);
+}); 
