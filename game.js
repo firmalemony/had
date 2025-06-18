@@ -1,6 +1,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const scoreElement = document.getElementById('score');
+const scoreElement = document.querySelector('.current-score');
 const gameOverElement = document.getElementById('gameOver');
 const finalScoreElement = document.getElementById('finalScore');
 
@@ -27,6 +27,55 @@ let food = {
 
 let gameLoop;
 let gameSpeed = 150; // milliseconds between updates
+
+// Score management
+let highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
+
+function updateScoreDisplay() {
+    scoreElement.textContent = `Score: ${snake.score}`;
+}
+
+function saveScore() {
+    const nickname = document.getElementById('nickname').value.trim();
+    if (nickname) {
+        const newScore = {
+            name: nickname,
+            score: snake.score,
+            date: new Date().toLocaleDateString()
+        };
+        
+        highScores.push(newScore);
+        highScores.sort((a, b) => b.score - a.score);
+        highScores = highScores.slice(0, 10); // Keep only top 10
+        
+        localStorage.setItem('snakeHighScores', JSON.stringify(highScores));
+        updateScoreboard();
+        gameOverElement.style.display = 'none';
+    }
+}
+
+function updateScoreboard() {
+    // Update podium
+    if (highScores.length > 0) {
+        document.getElementById('firstPlace').textContent = highScores[0].name;
+    }
+    if (highScores.length > 1) {
+        document.getElementById('secondPlace').textContent = highScores[1].name;
+    }
+    if (highScores.length > 2) {
+        document.getElementById('thirdPlace').textContent = highScores[2].name;
+    }
+    
+    // Update score list
+    const scoreList = document.getElementById('scoreList');
+    scoreList.innerHTML = '';
+    
+    for (let i = 3; i < highScores.length; i++) {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${i + 1}. ${highScores[i].name}</span><span>${highScores[i].score}</span>`;
+        scoreList.appendChild(li);
+    }
+}
 
 function randomizeFood() {
     food.position = {
@@ -80,7 +129,7 @@ function moveSnake() {
     // Check if snake ate food
     if (head.x === food.position.x && head.y === food.position.y) {
         snake.score += 1;
-        scoreElement.textContent = `Score: ${snake.score}`;
+        updateScoreDisplay();
         randomizeFood();
     } else {
         snake.positions.pop();
@@ -100,7 +149,7 @@ function restartGame() {
         length: 1,
         score: 0
     };
-    scoreElement.textContent = 'Score: 0';
+    updateScoreDisplay();
     gameOverElement.style.display = 'none';
     randomizeFood();
     gameLoop = setInterval(() => {
@@ -137,6 +186,7 @@ document.addEventListener('keydown', (event) => {
 
 // Start the game
 document.addEventListener('DOMContentLoaded', () => {
+    updateScoreboard(); // Initialize scoreboard
     randomizeFood();
     gameLoop = setInterval(() => {
         moveSnake();

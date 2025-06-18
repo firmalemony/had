@@ -7,35 +7,131 @@
     <style>
         body {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             margin: 0;
             background-color: #1a1a1a;
-            font-family: Arial, sans-serif;
-        }
-        canvas {
-            border: 2px solid #333;
-            background-color: #000;
-        }
-        #score {
+            font-family: 'Press Start 2P', cursive;
             color: #fff;
+        }
+
+        .game-container {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .scoreboard {
+            width: 300px;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border: 4px solid #444;
+            border-radius: 8px;
+        }
+
+        .current-score {
+            text-align: center;
             font-size: 24px;
             margin-bottom: 20px;
+            color: #4CAF50;
+            text-shadow: 2px 2px #000;
         }
+
+        .high-scores {
+            margin-top: 20px;
+        }
+
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 150px;
+            margin-bottom: 20px;
+        }
+
+        .podium-place {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 10px;
+        }
+
+        .podium-stand {
+            width: 60px;
+            background-color: #666;
+            border: 2px solid #888;
+        }
+
+        .podium-stand.first {
+            height: 100px;
+            background-color: #FFD700;
+        }
+
+        .podium-stand.second {
+            height: 80px;
+            background-color: #C0C0C0;
+        }
+
+        .podium-stand.third {
+            height: 60px;
+            background-color: #CD7F32;
+        }
+
+        .podium-name {
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .score-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .score-list li {
+            padding: 8px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .score-list li:nth-child(-n+3) {
+            display: none;
+        }
+
+        canvas {
+            border: 4px solid #444;
+            background-color: #000;
+            image-rendering: pixelated;
+        }
+
         #gameOver {
             display: none;
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: #fff;
+            background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
-            border-radius: 10px;
+            border: 4px solid #444;
+            border-radius: 8px;
             text-align: center;
         }
+
+        .nickname-input {
+            background-color: #2a2a2a;
+            border: 2px solid #444;
+            color: #fff;
+            padding: 8px;
+            margin: 10px 0;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+        }
+
         button {
             background-color: #4CAF50;
             color: white;
@@ -47,20 +143,51 @@
             font-size: 16px;
             margin: 10px 2px;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 4px;
+            font-family: 'Press Start 2P', cursive;
         }
+
         button:hover {
             background-color: #45a049;
+        }
+
+        @font-face {
+            font-family: 'Press Start 2P';
+            src: url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         }
     </style>
 </head>
 <body>
-    <div id="score">Score: 0</div>
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
-    <div id="gameOver">
-        <h2>Game Over!</h2>
-        <p>Your score: <span id="finalScore">0</span></p>
-        <button onclick="restartGame()">Play Again</button>
+    <div class="game-container">
+        <div class="game-area">
+            <div class="current-score">Score: 0</div>
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div id="gameOver">
+                <h2>Game Over!</h2>
+                <p>Your score: <span id="finalScore">0</span></p>
+                <input type="text" id="nickname" class="nickname-input" placeholder="Enter your nickname" maxlength="10">
+                <button onclick="saveScore()">Save Score</button>
+                <button onclick="restartGame()">Play Again</button>
+            </div>
+        </div>
+        <div class="scoreboard">
+            <h2>High Scores</h2>
+            <div class="podium">
+                <div class="podium-place">
+                    <div class="podium-stand first"></div>
+                    <div class="podium-name" id="firstPlace">-</div>
+                </div>
+                <div class="podium-place">
+                    <div class="podium-stand second"></div>
+                    <div class="podium-name" id="secondPlace">-</div>
+                </div>
+                <div class="podium-place">
+                    <div class="podium-stand third"></div>
+                    <div class="podium-name" id="thirdPlace">-</div>
+                </div>
+            </div>
+            <ul class="score-list" id="scoreList"></ul>
+        </div>
     </div>
     <script src="game.js"></script>
 </body>
