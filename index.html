@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
         body {
             display: flex;
@@ -801,7 +802,7 @@
         const GRID_COUNT_3D = 20;
 
         // Firebase configuration - using localStorage as fallback
-        let useCloudDatabase = false; // Set to false to use localStorage only
+        let useCloudDatabase = true; // Enable cloud database
 
         // Cloud high scores
         async function saveScoreToCloud() {
@@ -820,7 +821,7 @@
                 
                 try {
                     await db.collection('highScores').add(newScore);
-                    console.log('Score saved to cloud');
+                    console.log('Score saved to cloud database');
                     loadCloudScores();
                 } catch (error) {
                     console.error('Error saving to cloud:', error);
@@ -855,6 +856,7 @@
                 });
                 
                 updateScoreboard();
+                console.log('Cloud scores loaded successfully');
             } catch (error) {
                 console.error('Error loading cloud scores:', error);
                 // Fallback to localStorage
