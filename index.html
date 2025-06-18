@@ -477,28 +477,9 @@
         }
 
         function saveScore() {
-            const nickname = document.getElementById('nickname').value.trim();
-            if (nickname) {
-                const newScore = {
-                    name: nickname,
-                    score: snake.score,
-                    date: new Date().toLocaleDateString()
-                };
-                
-                highScores.push(newScore);
-                highScores.sort((a, b) => b.score - a.score);
-                highScores = highScores.slice(0, 10); // Keep only top 10
-                
-                localStorage.setItem('snakeHighScores', JSON.stringify(highScores));
-                updateScoreboard();
-                gameOverElement.style.display = 'none';
-                restartGame();
-                
-                // Also save to cloud (only if not already in cloud save)
-                if (useCloudDatabase) {
-                    saveScoreToCloud();
-                }
-            }
+            saveScoreToCloud();
+            gameOverElement.style.display = 'none';
+            restartGame();
         }
 
         function updateScoreboard() {
@@ -914,8 +895,8 @@
         // Cloud high scores
         async function saveScoreToCloud() {
             if (!useCloudDatabase || !db) {
-                console.log('Cloud database disabled - score saved locally only');
-                return; // Skip cloud if not configured
+                alert('Chyba: Nelze uložit skóre. Cloud databáze není dostupná.');
+                return;
             }
             
             const nickname = document.getElementById('nickname').value.trim();
@@ -933,16 +914,15 @@
                     loadCloudScores();
                 } catch (error) {
                     console.error('Error saving to cloud:', error);
-                    // Don't call saveScore to avoid infinite loop
-                    // Just log the error and continue
+                    alert('Chyba: Nelze uložit skóre do cloud databáze.');
                 }
             }
         }
 
         async function loadCloudScores() {
             if (!useCloudDatabase || !db) {
-                // Use localStorage only
-                highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
+                alert('Chyba: Nelze načíst skóre. Cloud databáze není dostupná.');
+                highScores = [];
                 updateScoreboard();
                 return;
             }
@@ -967,8 +947,8 @@
                 console.log('Cloud scores loaded successfully');
             } catch (error) {
                 console.error('Error loading cloud scores:', error);
-                // Fallback to localStorage
-                highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
+                alert('Chyba: Nelze načíst skóre z cloud databáze.');
+                highScores = [];
                 updateScoreboard();
             }
         }
