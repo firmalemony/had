@@ -204,6 +204,7 @@
         const GRID_COUNT = canvas.width / GRID_SIZE;
         const SNAKE_COLOR = '#00ff00';
         const FOOD_COLOR = '#ff0000';
+        const ZOMBIE_COLOR = '#808080'; // Gray zombie
 
         let snake = {
             positions: [{x: GRID_COUNT / 2, y: GRID_COUNT / 2}],
@@ -216,8 +217,15 @@
             position: {x: 0, y: 0}
         };
 
+        let zombie = {
+            position: {x: 0, y: 0},
+            direction: {x: 0, y: 0}
+        };
+
         let gameLoop;
+        let zombieLoop;
         let gameSpeed = 150; // milliseconds between updates
+        let zombieSpeed = 300; // zombie moves every 300ms (slower than snake)
 
         // Score management
         let highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
@@ -242,19 +250,20 @@
                 localStorage.setItem('snakeHighScores', JSON.stringify(highScores));
                 updateScoreboard();
                 gameOverElement.style.display = 'none';
+                restartGame();
             }
         }
 
         function updateScoreboard() {
             // Update podium
             if (highScores.length > 0) {
-                document.getElementById('firstPlace').textContent = highScores[0].name;
+                document.getElementById('firstPlace').textContent = `${highScores[0].name} (${highScores[0].score})`;
             }
             if (highScores.length > 1) {
-                document.getElementById('secondPlace').textContent = highScores[1].name;
+                document.getElementById('secondPlace').textContent = `${highScores[1].name} (${highScores[1].score})`;
             }
             if (highScores.length > 2) {
-                document.getElementById('thirdPlace').textContent = highScores[2].name;
+                document.getElementById('thirdPlace').textContent = `${highScores[2].name} (${highScores[2].score})`;
             }
             
             // Update score list
@@ -273,8 +282,9 @@
                 x: Math.floor(Math.random() * GRID_COUNT),
                 y: Math.floor(Math.random() * GRID_COUNT)
             };
-            // Make sure food doesn't spawn on snake
-            while (snake.positions.some(pos => pos.x === food.position.x && pos.y === food.position.y)) {
+            // Make sure food doesn't spawn on snake or zombie
+            while (snake.positions.some(pos => pos.x === food.position.x && pos.y === food.position.y) ||
+                   (zombie.position.x === food.position.x && zombie.position.y === food.position.y)) {
                 food.position = {
                     x: Math.floor(Math.random() * GRID_COUNT),
                     y: Math.floor(Math.random() * GRID_COUNT)
@@ -282,11 +292,113 @@
             }
         }
 
+        function randomizeZombie() {
+            // Place zombie far from snake
+            let attempts = 0;
+            do {
+                zombie.position = {
+                    x: Math.floor(Math.random() * GRID_COUNT),
+                    y: Math.floor(Math.random() * GRID_COUNT)
+                };
+                attempts++;
+            } while ((snake.positions.some(pos => pos.x === zombie.position.x && pos.y === zombie.position.y) ||
+                     (food.position.x === zombie.position.x && food.position.y === zombie.position.y)) && attempts < 100);
+        }
+
+        function moveZombie() {
+            const head = snake.positions[0];
+            const dx = head.x - zombie.position.x;
+            const dy = head.y - zombie.position.y;
+            
+            // Simple AI: move towards snake
+            if (Math.abs(dx) > Math.abs(dy)) {
+                // Move horizontally
+                zombie.direction = {x: dx > 0 ? 1 : -1, y: 0};
+            } else {
+                // Move vertically
+                zombie.direction = {x: 0, y: dy > 0 ? 1 : -1};
+            }
+            
+            // Move zombie
+            zombie.position.x = (zombie.position.x + zombie.direction.x + GRID_COUNT) % GRID_COUNT;
+            zombie.position.y = (zombie.position.y + zombie.direction.y + GRID_COUNT) % GRID_COUNT;
+        }
+
         function drawSquare(x, y, color) {
             ctx.fillStyle = color;
             ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-            ctx.strokeStyle = color === SNAKE_COLOR ? '#00cc00' : '#cc0000';
+            ctx.strokeStyle = color === SNAKE_COLOR ? '#00cc00' : color === ZOMBIE_COLOR ? '#666666' : '#cc0000';
             ctx.strokeRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+        }
+
+        function drawSnake(x, y) {
+            const pixelSize = GRID_SIZE / 4;
+            const startX = x * GRID_SIZE;
+            const startY = y * GRID_SIZE;
+            
+            // Snake body (green with darker green pixels)
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(startX, startY, GRID_SIZE, GRID_SIZE);
+            
+            // Snake pattern (darker green pixels)
+            ctx.fillStyle = '#00cc00';
+            ctx.fillRect(startX + pixelSize, startY + pixelSize, pixelSize, pixelSize);
+            ctx.fillRect(startX + pixelSize * 2, startY + pixelSize * 2, pixelSize, pixelSize);
+            
+            // Snake eyes (white)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(startX + pixelSize, startY + pixelSize, pixelSize, pixelSize);
+            ctx.fillRect(startX + pixelSize * 2, startY + pixelSize, pixelSize, pixelSize);
+            
+            // Snake pupils (black)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(startX + pixelSize + 1, startY + pixelSize + 1, 2, 2);
+            ctx.fillRect(startX + pixelSize * 2 + 1, startY + pixelSize + 1, 2, 2);
+        }
+
+        function drawHuman(x, y) {
+            const pixelSize = GRID_SIZE / 4;
+            const startX = x * GRID_SIZE;
+            const startY = y * GRID_SIZE;
+            
+            // Human body (red)
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(startX + pixelSize, startY + pixelSize * 2, pixelSize * 2, pixelSize * 2);
+            
+            // Human head (pink)
+            ctx.fillStyle = '#ffcccc';
+            ctx.fillRect(startX + pixelSize, startY, pixelSize * 2, pixelSize * 2);
+            
+            // Human eyes (black)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(startX + pixelSize + 1, startY + pixelSize, 2, 2);
+            ctx.fillRect(startX + pixelSize * 2 + 1, startY + pixelSize, 2, 2);
+            
+            // Human mouth (black line)
+            ctx.fillRect(startX + pixelSize + 1, startY + pixelSize * 2 - 1, pixelSize * 2 - 2, 1);
+        }
+
+        function drawZombie(x, y) {
+            const pixelSize = GRID_SIZE / 4;
+            const startX = x * GRID_SIZE;
+            const startY = y * GRID_SIZE;
+            
+            // Zombie body (gray)
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(startX + pixelSize, startY + pixelSize * 2, pixelSize * 2, pixelSize * 2);
+            
+            // Zombie head (dark gray)
+            ctx.fillStyle = '#666666';
+            ctx.fillRect(startX + pixelSize, startY, pixelSize * 2, pixelSize * 2);
+            
+            // Zombie eyes (red)
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(startX + pixelSize + 1, startY + pixelSize, 2, 2);
+            ctx.fillRect(startX + pixelSize * 2 + 1, startY + pixelSize, 2, 2);
+            
+            // Zombie mouth (dark red)
+            ctx.fillStyle = '#cc0000';
+            ctx.fillRect(startX + pixelSize + 1, startY + pixelSize * 2 - 1, pixelSize * 2 - 2, 2);
         }
 
         function draw() {
@@ -295,12 +407,21 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw snake
-            snake.positions.forEach(pos => {
-                drawSquare(pos.x, pos.y, SNAKE_COLOR);
+            snake.positions.forEach((pos, index) => {
+                if (index === 0) {
+                    // Draw snake head
+                    drawSnake(pos.x, pos.y);
+                } else {
+                    // Draw snake body (simpler)
+                    drawSquare(pos.x, pos.y, SNAKE_COLOR);
+                }
             });
 
-            // Draw food
-            drawSquare(food.position.x, food.position.y, FOOD_COLOR);
+            // Draw food (human)
+            drawHuman(food.position.x, food.position.y);
+            
+            // Draw zombie
+            drawZombie(zombie.position.x, zombie.position.y);
         }
 
         function moveSnake() {
@@ -311,6 +432,13 @@
 
             // Check for collision with self
             if (snake.positions.some(pos => pos.x === head.x && pos.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            // Check for collision with zombie (any part of snake)
+            if (snake.positions.some(pos => pos.x === zombie.position.x && pos.y === zombie.position.y) ||
+                (head.x === zombie.position.x && head.y === zombie.position.y)) {
                 gameOver();
                 return;
             }
@@ -329,6 +457,7 @@
 
         function gameOver() {
             clearInterval(gameLoop);
+            clearInterval(zombieLoop);
             finalScoreElement.textContent = snake.score;
             gameOverElement.style.display = 'block';
         }
@@ -343,10 +472,22 @@
             updateScoreDisplay();
             gameOverElement.style.display = 'none';
             randomizeFood();
+            randomizeZombie();
+            
+            // Clear existing loops
+            if (gameLoop) clearInterval(gameLoop);
+            if (zombieLoop) clearInterval(zombieLoop);
+            
+            // Start new loops
             gameLoop = setInterval(() => {
                 moveSnake();
                 draw();
             }, gameSpeed);
+            
+            zombieLoop = setInterval(() => {
+                moveZombie();
+                draw();
+            }, zombieSpeed);
         }
 
         // Handle keyboard controls
@@ -400,16 +541,26 @@
                 randomizeFood();
                 console.log('Food randomized');
                 
-                // Clear any existing game loop
-                if (gameLoop) {
-                    clearInterval(gameLoop);
-                }
+                randomizeZombie();
+                console.log('Zombie randomized');
                 
+                // Clear any existing loops
+                if (gameLoop) clearInterval(gameLoop);
+                if (zombieLoop) clearInterval(zombieLoop);
+                
+                // Start game loop
                 gameLoop = setInterval(() => {
                     moveSnake();
                     draw();
                 }, gameSpeed);
                 console.log('Game loop started');
+                
+                // Start zombie loop (slower)
+                zombieLoop = setInterval(() => {
+                    moveZombie();
+                    draw();
+                }, zombieSpeed);
+                console.log('Zombie loop started');
             } catch (error) {
                 console.error('Error in initGame:', error);
             }
