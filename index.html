@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
     <style>
         body {
             display: flex;
@@ -372,6 +371,41 @@
         // Score management
         let highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
 
+        // Firebase configuration - using localStorage as fallback
+        let useCloudDatabase = true; // Enable cloud database
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            authDomain: "snake-game-demo.firebaseapp.com",
+            projectId: "snake-game-demo",
+            storageBucket: "snake-game-demo.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        // Initialize Firebase
+        let db;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            
+            // Enable offline persistence
+            db.enablePersistence()
+                .catch((err) => {
+                    if (err.code == 'failed-precondition') {
+                        console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+                    } else if (err.code == 'unimplemented') {
+                        console.log('The current browser does not support persistence.');
+                    }
+                });
+            
+            console.log('Firebase initialized with cloud database support');
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            useCloudDatabase = false;
+        }
+
         function updateScoreDisplay() {
             scoreElement.textContent = `Score: ${snake.score}`;
         }
@@ -394,8 +428,10 @@
                 gameOverElement.style.display = 'none';
                 restartGame();
                 
-                // Also save to cloud
-                saveScoreToCloud();
+                // Also save to cloud (only if not already in cloud save)
+                if (useCloudDatabase) {
+                    saveScoreToCloud();
+                }
             }
         }
 
@@ -801,12 +837,9 @@
         const GRID_SIZE_3D = 1;
         const GRID_COUNT_3D = 20;
 
-        // Firebase configuration - using localStorage as fallback
-        let useCloudDatabase = true; // Enable cloud database
-
         // Cloud high scores
         async function saveScoreToCloud() {
-            if (!useCloudDatabase) {
+            if (!useCloudDatabase || !db) {
                 return; // Skip cloud if not configured
             }
             
@@ -825,14 +858,14 @@
                     loadCloudScores();
                 } catch (error) {
                     console.error('Error saving to cloud:', error);
-                    // Fallback to localStorage
-                    saveScore();
+                    // Don't call saveScore to avoid infinite loop
+                    // Just log the error and continue
                 }
             }
         }
 
         async function loadCloudScores() {
-            if (!useCloudDatabase) {
+            if (!useCloudDatabase || !db) {
                 // Use localStorage only
                 highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
                 updateScoreboard();
