@@ -153,6 +153,78 @@
         button:hover {
             background-color: #45a049;
         }
+
+        /* Mobile controls */
+        .mobile-controls {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: center;
+            margin: 5px 0;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            margin: 5px;
+            background-color: rgba(76, 175, 80, 0.8);
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .control-btn:active {
+            background-color: #45a049;
+            transform: scale(0.95);
+        }
+
+        /* Mobile responsive design */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                padding: 10px;
+            }
+
+            .game-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .scoreboard {
+                width: 100%;
+                max-width: 400px;
+                order: -1;
+            }
+
+            canvas {
+                width: 100%;
+                max-width: 400px;
+                height: auto;
+            }
+
+            .mobile-controls {
+                display: block;
+            }
+
+            .current-score {
+                font-size: 20px;
+            }
+
+            .podium-name {
+                font-size: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -160,6 +232,18 @@
         <div class="game-area">
             <div class="current-score">Score: 0</div>
             <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div class="mobile-controls">
+                <div class="control-row">
+                    <div class="control-btn" id="upBtn">↑</div>
+                </div>
+                <div class="control-row">
+                    <div class="control-btn" id="leftBtn">←</div>
+                    <div class="control-btn" id="rightBtn">→</div>
+                </div>
+                <div class="control-row">
+                    <div class="control-btn" id="downBtn">↓</div>
+                </div>
+            </div>
             <div id="gameOver">
                 <h2>Game Over!</h2>
                 <p>Your score: <span id="finalScore">0</span></p>
@@ -516,6 +600,63 @@
             }
         });
 
+        // Mobile touch controls
+        function setupMobileControls() {
+            const upBtn = document.getElementById('upBtn');
+            const downBtn = document.getElementById('downBtn');
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+
+            function handleDirection(direction) {
+                switch (direction) {
+                    case 'up':
+                        if (snake.direction.y !== 1) {
+                            snake.direction = {x: 0, y: -1};
+                        }
+                        break;
+                    case 'down':
+                        if (snake.direction.y !== -1) {
+                            snake.direction = {x: 0, y: 1};
+                        }
+                        break;
+                    case 'left':
+                        if (snake.direction.x !== 1) {
+                            snake.direction = {x: -1, y: 0};
+                        }
+                        break;
+                    case 'right':
+                        if (snake.direction.x !== -1) {
+                            snake.direction = {x: 1, y: 0};
+                        }
+                        break;
+                }
+            }
+
+            // Touch events
+            upBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleDirection('up');
+            });
+            downBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleDirection('down');
+            });
+            leftBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleDirection('left');
+            });
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleDirection('right');
+            });
+
+            // Mouse events for testing on desktop
+            upBtn.addEventListener('click', () => handleDirection('up'));
+            downBtn.addEventListener('click', () => handleDirection('down'));
+            leftBtn.addEventListener('click', () => handleDirection('left'));
+            rightBtn.addEventListener('click', () => handleDirection('right'));
+        }
+
         // Alternative initialization for Vercel
         function initGame() {
             console.log('Initializing game...');
@@ -543,6 +684,10 @@
                 
                 randomizeZombie();
                 console.log('Zombie randomized');
+                
+                // Setup mobile controls
+                setupMobileControls();
+                console.log('Mobile controls setup');
                 
                 // Clear any existing loops
                 if (gameLoop) clearInterval(gameLoop);
