@@ -372,39 +372,52 @@
         let highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
 
         // Firebase configuration - using localStorage as fallback
-        let useCloudDatabase = true; // Enable cloud database
+        let useCloudDatabase = false; // Disable cloud database until valid config is provided
+        let db = null;
 
-        // Firebase configuration
+        // Firebase configuration - replace with your actual Firebase config
         const firebaseConfig = {
-            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-            authDomain: "snake-game-demo.firebaseapp.com",
-            projectId: "snake-game-demo",
-            storageBucket: "snake-game-demo.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdef1234567890"
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
-        // Initialize Firebase
-        let db;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            
-            // Enable offline persistence
-            db.enablePersistence()
-                .catch((err) => {
-                    if (err.code == 'failed-precondition') {
-                        console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-                    } else if (err.code == 'unimplemented') {
-                        console.log('The current browser does not support persistence.');
-                    }
-                });
-            
-            console.log('Firebase initialized with cloud database support');
-        } catch (error) {
-            console.error('Firebase initialization failed:', error);
-            useCloudDatabase = false;
+        // Initialize Firebase only if config is valid
+        function initializeFirebase() {
+            // Check if config is still placeholder
+            if (firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
+                console.log('Firebase not configured - using localStorage only');
+                useCloudDatabase = false;
+                return;
+            }
+
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                
+                // Enable offline persistence
+                db.enablePersistence()
+                    .catch((err) => {
+                        if (err.code == 'failed-precondition') {
+                            console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+                        } else if (err.code == 'unimplemented') {
+                            console.log('The current browser does not support persistence.');
+                        }
+                    });
+                
+                useCloudDatabase = true;
+                console.log('Firebase initialized with cloud database support');
+            } catch (error) {
+                console.error('Firebase initialization failed:', error);
+                useCloudDatabase = false;
+            }
         }
+
+        // Initialize Firebase on page load
+        initializeFirebase();
 
         function updateScoreDisplay() {
             scoreElement.textContent = `Score: ${snake.score}`;
@@ -840,6 +853,7 @@
         // Cloud high scores
         async function saveScoreToCloud() {
             if (!useCloudDatabase || !db) {
+                console.log('Cloud database disabled - score saved locally only');
                 return; // Skip cloud if not configured
             }
             
