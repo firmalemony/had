@@ -184,12 +184,37 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-// Start the game
-document.addEventListener('DOMContentLoaded', () => {
-    updateScoreboard(); // Initialize scoreboard
+// Alternative initialization for Vercel
+function initGame() {
+    console.log('Initializing game...');
+    updateScoreboard();
     randomizeFood();
     gameLoop = setInterval(() => {
         moveSnake();
         draw();
     }, gameSpeed);
-}); 
+    console.log('Game initialized successfully');
+}
+
+// Start the game
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded on Vercel');
+    console.log('Canvas element:', canvas);
+    console.log('Context:', ctx);
+    console.log('Score element:', scoreElement);
+    
+    try {
+        initGame();
+    } catch (error) {
+        console.error('Error starting game:', error);
+        // Fallback initialization
+        setTimeout(initGame, 100);
+    }
+});
+
+// Fallback for Vercel
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGame);
+} else {
+    initGame();
+} 
