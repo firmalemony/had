@@ -7,6 +7,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
     <style>
         body {
             display: flex;
@@ -86,7 +89,7 @@
 
         .podium-name {
             margin-top: 10px;
-            font-size: 12px;
+            font-size: 10px;
         }
 
         .score-list {
@@ -204,7 +207,11 @@
             .scoreboard {
                 width: 100%;
                 max-width: 400px;
-                order: -1;
+                order: 2; /* Move scoreboard below game on mobile */
+            }
+
+            .game-area {
+                order: 1; /* Game area first on mobile */
             }
 
             canvas {
@@ -224,10 +231,60 @@
             .podium-name {
                 font-size: 10px;
             }
+
+            .game-mode-toggle {
+                top: 10px;
+                right: 10px;
+            }
+
+            .toggle-btn {
+                font-size: 10px;
+                padding: 8px 16px;
+            }
+        }
+
+        /* Game mode toggle */
+        .game-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toggle-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 12px;
+        }
+
+        .toggle-btn:hover {
+            background-color: #45a049;
+        }
+
+        /* 3D game container */
+        #game3D {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 999;
         }
     </style>
 </head>
 <body>
+    <div class="game-mode-toggle">
+        <button class="toggle-btn" id="toggleBtn">Switch to 3D</button>
+    </div>
+    
+    <div id="game3D"></div>
+    
     <div class="game-container">
         <div class="game-area">
             <div class="current-score">Score: 0</div>
@@ -335,6 +392,9 @@
                 updateScoreboard();
                 gameOverElement.style.display = 'none';
                 restartGame();
+                
+                // Also save to cloud
+                saveScoreToCloud();
             }
         }
 
@@ -368,7 +428,7 @@
             };
             // Make sure food doesn't spawn on snake or zombie
             while (snake.positions.some(pos => pos.x === food.position.x && pos.y === food.position.y) ||
-                   (zombie.position.x === food.position.x && zombie.position.y === food.position.y)) {
+                   (zombie.position.x === food.position.x && food.position.y === food.position.y)) {
                 food.position = {
                     x: Math.floor(Math.random() * GRID_COUNT),
                     y: Math.floor(Math.random() * GRID_COUNT)
@@ -733,6 +793,219 @@
         } else {
             initGame();
         }
+
+        // 3D Game Implementation
+        let scene3D, camera3D, renderer3D, snake3D, food3D, zombie3D;
+        let gameMode = '2D'; // '2D' or '3D'
+        const GRID_SIZE_3D = 1;
+        const GRID_COUNT_3D = 20;
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            authDomain: "snake-game-xxxxx.firebaseapp.com",
+            projectId: "snake-game-xxxxx",
+            storageBucket: "snake-game-xxxxx.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Cloud high scores
+        async function saveScoreToCloud() {
+            const nickname = document.getElementById('nickname').value.trim();
+            if (nickname) {
+                const newScore = {
+                    name: nickname,
+                    score: snake.score,
+                    date: new Date().toISOString(),
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                try {
+                    await db.collection('highScores').add(newScore);
+                    console.log('Score saved to cloud');
+                    loadCloudScores();
+                } catch (error) {
+                    console.error('Error saving to cloud:', error);
+                    // Fallback to localStorage
+                    saveScore();
+                }
+            }
+        }
+
+        async function loadCloudScores() {
+            try {
+                const snapshot = await db.collection('highScores')
+                    .orderBy('score', 'desc')
+                    .limit(10)
+                    .get();
+                
+                highScores = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    highScores.push({
+                        name: data.name,
+                        score: data.score,
+                        date: new Date(data.date).toLocaleDateString()
+                    });
+                });
+                
+                updateScoreboard();
+            } catch (error) {
+                console.error('Error loading cloud scores:', error);
+                // Fallback to localStorage
+                highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
+                updateScoreboard();
+            }
+        }
+
+        function init3DGame() {
+            const container = document.getElementById('game3D');
+            
+            // Scene
+            scene3D = new THREE.Scene();
+            scene3D.background = new THREE.Color(0x1a1a1a);
+            
+            // Camera
+            camera3D = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera3D.position.set(0, 25, 30);
+            camera3D.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer3D = new THREE.WebGLRenderer({ antialias: true });
+            renderer3D.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer3D.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene3D.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene3D.add(directionalLight);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(GRID_COUNT_3D, GRID_COUNT_3D, 0x444444, 0x222222);
+            scene3D.add(gridHelper);
+            
+            // Create 3D objects with better graphics
+            create3DObjects();
+            
+            // Start 3D game loop
+            animate3D();
+        }
+
+        function create3DObjects() {
+            // Snake (green cubes with texture)
+            snake3D = [];
+            const snakeGeometry = new THREE.BoxGeometry(GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9);
+            const snakeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+            
+            // Food (red sphere with glow)
+            const foodGeometry = new THREE.SphereGeometry(GRID_SIZE_3D * 0.4, 12, 12);
+            const foodMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0xff0000,
+                emissive: 0x330000
+            });
+            food3D = new THREE.Mesh(foodGeometry, foodMaterial);
+            scene3D.add(food3D);
+            
+            // Zombie (gray cube with red eyes)
+            const zombieGeometry = new THREE.BoxGeometry(GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9);
+            const zombieMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+            zombie3D = new THREE.Mesh(zombieGeometry, zombieMaterial);
+            scene3D.add(zombie3D);
+            
+            // Initialize positions
+            update3DPositions();
+        }
+
+        function update3DPositions() {
+            // Update snake with better graphics
+            snake3D.forEach(segment => scene3D.remove(segment));
+            snake3D = [];
+            
+            const snakeGeometry = new THREE.BoxGeometry(GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9);
+            
+            snake.positions.forEach((pos, index) => {
+                const snakeMaterial = new THREE.MeshLambertMaterial({ 
+                    color: index === 0 ? 0x00cc00 : 0x00ff00,
+                    emissive: index === 0 ? 0x003300 : 0x003300
+                });
+                const segment = new THREE.Mesh(snakeGeometry, snakeMaterial);
+                segment.position.set(
+                    (pos.x - GRID_COUNT_3D / 2) * GRID_SIZE_3D,
+                    GRID_SIZE_3D * 0.45,
+                    (pos.y - GRID_COUNT_3D / 2) * GRID_SIZE_3D
+                );
+                scene3D.add(segment);
+                snake3D.push(segment);
+            });
+            
+            // Update food with animation
+            food3D.position.set(
+                (food.position.x - GRID_COUNT_3D / 2) * GRID_SIZE_3D,
+                GRID_SIZE_3D * 0.4 + Math.sin(Date.now() * 0.005) * 0.1,
+                (food.position.y - GRID_COUNT_3D / 2) * GRID_SIZE_3D
+            );
+            food3D.rotation.y += 0.02;
+            
+            // Update zombie
+            zombie3D.position.set(
+                (zombie.position.x - GRID_COUNT_3D / 2) * GRID_SIZE_3D,
+                GRID_SIZE_3D * 0.45,
+                (zombie.position.y - GRID_COUNT_3D / 2) * GRID_SIZE_3D
+            );
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            update3DPositions();
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        function toggleGameMode() {
+            const toggleBtn = document.getElementById('toggleBtn');
+            const gameContainer = document.querySelector('.game-container');
+            const game3D = document.getElementById('game3D');
+            
+            if (gameMode === '2D') {
+                gameMode = '3D';
+                gameContainer.style.display = 'none';
+                game3D.style.display = 'block';
+                toggleBtn.textContent = 'Switch to 2D';
+                init3DGame();
+            } else {
+                gameMode = '2D';
+                gameContainer.style.display = 'flex';
+                game3D.style.display = 'none';
+                toggleBtn.textContent = 'Switch to 3D';
+                if (renderer3D) {
+                    renderer3D.domElement.remove();
+                }
+            }
+        }
+
+        // Setup toggle button
+        document.getElementById('toggleBtn').addEventListener('click', toggleGameMode);
+
+        // Handle window resize for 3D
+        window.addEventListener('resize', () => {
+            if (gameMode === '3D' && renderer3D && camera3D) {
+                camera3D.aspect = window.innerWidth / window.innerHeight;
+                camera3D.updateProjectionMatrix();
+                renderer3D.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Load cloud scores on startup
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCloudScores();
+        });
     </script>
 </body>
 </html> 
