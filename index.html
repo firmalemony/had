@@ -800,22 +800,15 @@
         const GRID_SIZE_3D = 1;
         const GRID_COUNT_3D = 20;
 
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-            authDomain: "snake-game-xxxxx.firebaseapp.com",
-            projectId: "snake-game-xxxxx",
-            storageBucket: "snake-game-xxxxx.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // Firebase configuration - using localStorage as fallback
+        let useCloudDatabase = false; // Set to false to use localStorage only
 
         // Cloud high scores
         async function saveScoreToCloud() {
+            if (!useCloudDatabase) {
+                return; // Skip cloud if not configured
+            }
+            
             const nickname = document.getElementById('nickname').value.trim();
             if (nickname) {
                 const newScore = {
@@ -838,6 +831,13 @@
         }
 
         async function loadCloudScores() {
+            if (!useCloudDatabase) {
+                // Use localStorage only
+                highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
+                updateScoreboard();
+                return;
+            }
+            
             try {
                 const snapshot = await db.collection('highScores')
                     .orderBy('score', 'desc')
@@ -878,6 +878,8 @@
             // Renderer
             renderer3D = new THREE.WebGLRenderer({ antialias: true });
             renderer3D.setSize(window.innerWidth, window.innerHeight);
+            renderer3D.shadowMap.enabled = true;
+            renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer3D.domElement);
             
             // Lighting
@@ -886,6 +888,9 @@
             
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
             scene3D.add(directionalLight);
             
             // Grid
@@ -895,29 +900,36 @@
             // Create 3D objects with better graphics
             create3DObjects();
             
+            // Add 3D mobile controls
+            add3DMobileControls();
+            
             // Start 3D game loop
             animate3D();
         }
 
         function create3DObjects() {
-            // Snake (green cubes with texture)
+            // Snake (green cubes with better materials)
             snake3D = [];
             const snakeGeometry = new THREE.BoxGeometry(GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9);
-            const snakeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
             
-            // Food (red sphere with glow)
-            const foodGeometry = new THREE.SphereGeometry(GRID_SIZE_3D * 0.4, 12, 12);
+            // Food (red sphere with glow and animation)
+            const foodGeometry = new THREE.SphereGeometry(GRID_SIZE_3D * 0.4, 16, 16);
             const foodMaterial = new THREE.MeshLambertMaterial({ 
                 color: 0xff0000,
                 emissive: 0x330000
             });
             food3D = new THREE.Mesh(foodGeometry, foodMaterial);
+            food3D.castShadow = true;
             scene3D.add(food3D);
             
-            // Zombie (gray cube with red eyes)
+            // Zombie (gray cube with red eyes effect)
             const zombieGeometry = new THREE.BoxGeometry(GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9, GRID_SIZE_3D * 0.9);
-            const zombieMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+            const zombieMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x808080,
+                emissive: 0x111111
+            });
             zombie3D = new THREE.Mesh(zombieGeometry, zombieMaterial);
+            zombie3D.castShadow = true;
             scene3D.add(zombie3D);
             
             // Initialize positions
@@ -925,7 +937,7 @@
         }
 
         function update3DPositions() {
-            // Update snake with better graphics
+            // Update snake with better graphics and shadows
             snake3D.forEach(segment => scene3D.remove(segment));
             snake3D = [];
             
@@ -942,24 +954,73 @@
                     GRID_SIZE_3D * 0.45,
                     (pos.y - GRID_COUNT_3D / 2) * GRID_SIZE_3D
                 );
+                segment.castShadow = true;
+                segment.receiveShadow = true;
                 scene3D.add(segment);
                 snake3D.push(segment);
             });
             
-            // Update food with animation
+            // Update food with enhanced animation
             food3D.position.set(
                 (food.position.x - GRID_COUNT_3D / 2) * GRID_SIZE_3D,
-                GRID_SIZE_3D * 0.4 + Math.sin(Date.now() * 0.005) * 0.1,
+                GRID_SIZE_3D * 0.4 + Math.sin(Date.now() * 0.005) * 0.15,
                 (food.position.y - GRID_COUNT_3D / 2) * GRID_SIZE_3D
             );
-            food3D.rotation.y += 0.02;
+            food3D.rotation.y += 0.03;
+            food3D.rotation.x += 0.01;
             
-            // Update zombie
+            // Update zombie with subtle movement
             zombie3D.position.set(
                 (zombie.position.x - GRID_COUNT_3D / 2) * GRID_SIZE_3D,
-                GRID_SIZE_3D * 0.45,
+                GRID_SIZE_3D * 0.45 + Math.sin(Date.now() * 0.003) * 0.05,
                 (zombie.position.y - GRID_COUNT_3D / 2) * GRID_SIZE_3D
             );
+        }
+
+        function add3DMobileControls() {
+            // Add 3D mobile controls overlay
+            const controls3D = document.createElement('div');
+            controls3D.id = 'controls3D';
+            controls3D.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 1001;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            `;
+            
+            controls3D.innerHTML = `
+                <div style="display: flex; justify-content: center; margin: 5px 0;">
+                    <button class="control-btn" id="upBtn3D">↑</button>
+                </div>
+                <div style="display: flex; justify-content: center; margin: 5px 0;">
+                    <button class="control-btn" id="leftBtn3D">←</button>
+                    <button class="control-btn" id="rightBtn3D">→</button>
+                </div>
+                <div style="display: flex; justify-content: center; margin: 5px 0;">
+                    <button class="control-btn" id="downBtn3D">↓</button>
+                </div>
+            `;
+            
+            document.body.appendChild(controls3D);
+            
+            // Add event listeners for 3D controls
+            document.getElementById('upBtn3D').addEventListener('click', () => {
+                if (snake.direction.y !== 1) snake.direction = {x: 0, y: -1};
+            });
+            document.getElementById('downBtn3D').addEventListener('click', () => {
+                if (snake.direction.y !== -1) snake.direction = {x: 0, y: 1};
+            });
+            document.getElementById('leftBtn3D').addEventListener('click', () => {
+                if (snake.direction.x !== 1) snake.direction = {x: -1, y: 0};
+            });
+            document.getElementById('rightBtn3D').addEventListener('click', () => {
+                if (snake.direction.x !== -1) snake.direction = {x: 1, y: 0};
+            });
         }
 
         function animate3D() {
@@ -972,6 +1033,7 @@
             const toggleBtn = document.getElementById('toggleBtn');
             const gameContainer = document.querySelector('.game-container');
             const game3D = document.getElementById('game3D');
+            const controls3D = document.getElementById('controls3D');
             
             if (gameMode === '2D') {
                 gameMode = '3D';
@@ -986,6 +1048,9 @@
                 toggleBtn.textContent = 'Switch to 3D';
                 if (renderer3D) {
                     renderer3D.domElement.remove();
+                }
+                if (controls3D) {
+                    controls3D.remove();
                 }
             }
         }
