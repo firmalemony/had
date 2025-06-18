@@ -187,13 +187,41 @@ document.addEventListener('keydown', (event) => {
 // Alternative initialization for Vercel
 function initGame() {
     console.log('Initializing game...');
-    updateScoreboard();
-    randomizeFood();
-    gameLoop = setInterval(() => {
-        moveSnake();
-        draw();
-    }, gameSpeed);
-    console.log('Game initialized successfully');
+    
+    // Check if all elements exist
+    if (!canvas) {
+        console.error('Canvas not found!');
+        return;
+    }
+    if (!ctx) {
+        console.error('Canvas context not found!');
+        return;
+    }
+    if (!scoreElement) {
+        console.error('Score element not found!');
+        return;
+    }
+    
+    try {
+        updateScoreboard(); // Initialize scoreboard
+        console.log('Scoreboard updated');
+        
+        randomizeFood();
+        console.log('Food randomized');
+        
+        // Clear any existing game loop
+        if (gameLoop) {
+            clearInterval(gameLoop);
+        }
+        
+        gameLoop = setInterval(() => {
+            moveSnake();
+            draw();
+        }, gameSpeed);
+        console.log('Game loop started');
+    } catch (error) {
+        console.error('Error in initGame:', error);
+    }
 }
 
 // Start the game
