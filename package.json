@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/firmalemony/had#readme",
   "dependencies": {
-    "@vercel/blob": "^1.1.1"
+    "@vercel/blob": "^1.1.1",
+    "micro": "^10.0.1"
   }
 }
