@@ -9,5 +9,8 @@
             "src": "*.html",
             "use": "@vercel/static"
         }
+    ],
+    "rewrites": [
+        { "source": "/api/highscores", "destination": "/api/highscores.js" }
     ]
 } 
