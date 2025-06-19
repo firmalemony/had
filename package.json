@@ -1,0 +1,23 @@
+{
+  "name": "had",
+  "version": "1.0.0",
+  "description": "A classic Snake game implementation inspired by the Nokia 3310 version.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/firmalemony/had.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/firmalemony/had/issues"
+  },
+  "homepage": "https://github.com/firmalemony/had#readme",
+  "dependencies": {
+    "@vercel/blob": "^1.1.1"
+  }
+}
