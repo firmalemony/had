@@ -893,63 +893,35 @@
         const GRID_COUNT_3D = 20;
 
         // Cloud high scores
-        async function saveScoreToCloud() {
-            if (!useCloudDatabase || !db) {
-                alert('Chyba: Nelze uložit skóre. Cloud databáze není dostupná.');
-                return;
-            }
-            
-            const nickname = document.getElementById('nickname').value.trim();
-            if (nickname) {
-                const newScore = {
-                    name: nickname,
-                    score: snake.score,
-                    date: new Date().toISOString(),
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                
-                try {
-                    await db.collection('highScores').add(newScore);
-                    console.log('Score saved to cloud database');
-                    loadCloudScores();
-                } catch (error) {
-                    console.error('Error saving to cloud:', error);
-                    alert('Chyba: Nelze uložit skóre do cloud databáze.');
-                }
+        async function loadCloudScores() {
+            try {
+                const response = await fetch('/api/highscores');
+                const { highscores } = await response.json();
+                highScores = highscores;
+                updateScoreboard();
+            } catch (error) {
+                alert('Chyba: Nelze načíst skóre z Vercel Blob.');
+                highScores = [];
+                updateScoreboard();
             }
         }
 
-        async function loadCloudScores() {
-            if (!useCloudDatabase || !db) {
-                alert('Chyba: Nelze načíst skóre. Cloud databáze není dostupná.');
-                highScores = [];
-                updateScoreboard();
-                return;
-            }
-            
+        async function saveScoreToCloud() {
+            const nickname = document.getElementById('nickname').value.trim();
+            if (!nickname) return;
             try {
-                const snapshot = await db.collection('highScores')
-                    .orderBy('score', 'desc')
-                    .limit(10)
-                    .get();
-                
-                highScores = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    highScores.push({
-                        name: data.name,
-                        score: data.score,
-                        date: new Date(data.date).toLocaleDateString()
-                    });
+                const response = await fetch('/api/highscores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: nickname, score: snake.score })
                 });
-                
-                updateScoreboard();
-                console.log('Cloud scores loaded successfully');
+                if (response.ok) {
+                    loadCloudScores();
+                } else {
+                    alert('Chyba: Nelze uložit skóre do Vercel Blob.');
+                }
             } catch (error) {
-                console.error('Error loading cloud scores:', error);
-                alert('Chyba: Nelze načíst skóre z cloud databáze.');
-                highScores = [];
-                updateScoreboard();
+                alert('Chyba: Nelze uložit skóre do Vercel Blob.');
             }
         }
 
