@@ -893,14 +893,19 @@
         const GRID_COUNT_3D = 20;
 
         // Cloud high scores
+        const BIN_ID = '6853c61d8561e97a50270da2';
+        const API_KEY = '$2a$10$qNmtqdTs7Xxuz5zKvgppHe5pYrYEqC8fr.A.F4rqPf2NvoIy5MYJi';
+
         async function loadCloudScores() {
             try {
-                const response = await fetch('/api/highscores');
-                const { highscores } = await response.json();
-                highScores = highscores;
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                    headers: { 'X-Access-Key': API_KEY }
+                });
+                const data = await response.json();
+                highScores = data.record;
                 updateScoreboard();
             } catch (error) {
-                alert('Chyba: Nelze načíst skóre z Vercel Blob.');
+                alert('Chyba: Nelze načíst skóre z jsonbin.io.');
                 highScores = [];
                 updateScoreboard();
             }
@@ -909,19 +914,21 @@
         async function saveScoreToCloud() {
             const nickname = document.getElementById('nickname').value.trim();
             if (!nickname) return;
+            highScores.push({ name: nickname, score: snake.score, date: new Date().toISOString() });
+            highScores.sort((a, b) => b.score - a.score);
+            highScores = highScores.slice(0, 10);
             try {
-                const response = await fetch('/api/highscores', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: nickname, score: snake.score })
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Access-Key': API_KEY
+                    },
+                    body: JSON.stringify(highScores)
                 });
-                if (response.ok) {
-                    loadCloudScores();
-                } else {
-                    alert('Chyba: Nelze uložit skóre do Vercel Blob.');
-                }
+                loadCloudScores();
             } catch (error) {
-                alert('Chyba: Nelze uložit skóre do Vercel Blob.');
+                alert('Chyba: Nelze uložit skóre do jsonbin.io.');
             }
         }
 
