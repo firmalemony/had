@@ -1,8 +1,8 @@
-import { put, get } from '@vercel/blob';
+const { put, get } = require('@vercel/blob');
 
 const BLOB_KEY = 'highscores.json';
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const blob = await get(BLOB_KEY);
